@@ -1,0 +1,824 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Peligro en Pinebrook - App Complementaria</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        cinzel: ['Cinzel', 'serif'],
+                        inter: ['Inter', 'sans-serif'],
+                    },
+                    colors: {
+                        dnd: {
+                            dark: '#1a1a2e',
+                            panel: '#24243e',
+                            red: '#e94560',
+                            gold: '#f0a500'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #0f0f1a; color: #e2e8f0; }
+        h1, h2, h3, .font-title { font-family: 'Cinzel', serif; }
+        
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: #1a1a2e; }
+        ::-webkit-scrollbar-thumb { background: #e94560; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #d03b55; }
+
+        .strike-through {
+            text-decoration: line-through;
+            color: #64748b;
+            transition: all 0.3s ease;
+        }
+
+        /* Dice Animation */
+        @keyframes dynamicRoll {
+            0% { transform: rotate(0deg) scale(1) translateY(0); }
+            25% { transform: rotate(25deg) scale(1.2) translateY(-10px); }
+            50% { transform: rotate(-25deg) scale(0.9) translateY(5px); }
+            75% { transform: rotate(15deg) scale(1.1) translateY(-5px); }
+            100% { transform: rotate(0deg) scale(1) translateY(0); }
+        }
+        .rolling { animation: dynamicRoll 0.6s cubic-bezier(0.36, 0.07, 0.19, 0.97) both; color: #f0a500 !important; }
+
+        /* Slide & Fade Animations */
+        @keyframes slideUp {
+            from { transform: translateY(100%); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+        .slide-up { animation: slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: scale(0.98); }
+            to { opacity: 1; transform: scale(1); }
+        }
+        .fade-in { animation: fadeIn 0.3s ease-out forwards; }
+        
+        .number-blur { filter: blur(2px); opacity: 0.8; }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col pb-24">
+
+    <!-- Header -->
+    <header class="bg-dnd-dark border-b border-dnd-red/30 sticky top-0 z-40 shadow-lg">
+        <div class="container mx-auto px-4 py-4 flex flex-wrap justify-between items-center gap-4">
+            <h1 class="text-xl md:text-3xl text-dnd-gold font-title tracking-wider cursor-pointer" onclick="showView('selection-view')">
+                <i class="fa-solid fa-dragon mr-2"></i>Pinebrook
+            </h1>
+            <div id="header-controls" class="flex gap-2">
+                <button id="btn-dm-mode" onclick="showView('dm-setup-view')" class="bg-indigo-900 hover:bg-indigo-800 text-indigo-100 px-4 py-2 rounded border border-indigo-500/50 transition-colors text-sm font-bold shadow-lg shadow-indigo-900/50">
+                    <i class="fa-solid fa-crown mr-2"></i> Modo DM
+                </button>
+                <button id="btn-back-selection" onclick="showView('selection-view')" class="hidden bg-slate-800 hover:bg-slate-700 text-gray-300 px-4 py-2 rounded border border-gray-600 transition-colors text-sm">
+                    <i class="fa-solid fa-users mr-2"></i> Cambiar
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Views Container -->
+    <main class="container mx-auto px-4 py-6 flex-grow relative">
+        
+        <!-- VIEW 1: Character Selection Screen -->
+        <div id="selection-view" class="fade-in view-section">
+            <div class="text-center mb-10">
+                <h2 class="text-4xl text-white font-title mb-2">Elige a tu Héroe</h2>
+                <p class="text-gray-400">Selecciona el personaje que guiarás en esta aventura.</p>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6" id="character-grid">
+                <!-- Grid injected by JS -->
+            </div>
+        </div>
+
+        <!-- VIEW 2: Active Character Sheet -->
+        <div id="sheet-view" class="hidden fade-in view-section">
+            <!-- Content injected by JS -->
+        </div>
+
+        <!-- VIEW 3: DM Setup Screen -->
+        <div id="dm-setup-view" class="hidden fade-in view-section max-w-4xl mx-auto">
+            <div class="text-center mb-8">
+                <h2 class="text-4xl text-indigo-400 font-title mb-2">Pantalla del Dungeon Master</h2>
+                <p class="text-gray-400">Selecciona los personajes que jugarán en esta sesión.</p>
+            </div>
+            
+            <div class="bg-dnd-panel border border-indigo-500/30 rounded-xl p-6 mb-6">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4" id="dm-roster-grid">
+                    <!-- Setup Roster injected by JS -->
+                </div>
+            </div>
+
+            <div class="flex justify-between items-center bg-slate-800 p-4 rounded-xl border border-gray-700 sticky bottom-4 z-30 shadow-2xl">
+                <span class="text-gray-300 font-bold">Jugadores: <span id="dm-party-count" class="text-dnd-gold text-xl">0</span></span>
+                <button onclick="startDMSession()" class="bg-indigo-600 hover:bg-indigo-500 text-white px-6 py-3 rounded-lg font-bold transition-all shadow-lg shadow-indigo-900/50">
+                    <i class="fa-solid fa-play mr-2"></i> Iniciar Sesión DM
+                </button>
+            </div>
+        </div>
+
+        <!-- VIEW 4: DM Dashboard -->
+        <div id="dm-dashboard-view" class="hidden fade-in view-section">
+            <div class="flex flex-col md:flex-row justify-between items-center mb-6 gap-4">
+                <h2 class="text-3xl text-indigo-400 font-title"><i class="fa-solid fa-scroll"></i> Rastreador del Grupo</h2>
+                <div class="flex gap-3 w-full md:w-auto">
+                    <button onclick="sortInitiative()" class="flex-1 md:flex-none bg-slate-700 hover:bg-slate-600 px-4 py-2 rounded text-white border border-gray-500 transition-colors">
+                        <i class="fa-solid fa-sort-numeric-down mr-2"></i> Ordenar Iniciativa
+                    </button>
+                    <button onclick="showView('dm-setup-view')" class="bg-slate-800 hover:bg-slate-700 px-4 py-2 rounded text-gray-300 border border-gray-600 transition-colors">
+                        <i class="fa-solid fa-cog"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- DM Dice Bar -->
+            <div class="bg-dnd-panel rounded-xl p-4 border border-indigo-500/30 mb-6 flex flex-wrap gap-2 justify-center">
+                <span class="text-gray-400 text-sm flex items-center mr-2"><i class="fa-solid fa-dice mr-2"></i> Dados Rápidos:</span>
+                <button onclick="quickRoll(4)" class="px-3 py-1 bg-slate-800 hover:bg-indigo-600 border border-gray-600 rounded text-white">d4</button>
+                <button onclick="quickRoll(6)" class="px-3 py-1 bg-slate-800 hover:bg-indigo-600 border border-gray-600 rounded text-white">d6</button>
+                <button onclick="quickRoll(8)" class="px-3 py-1 bg-slate-800 hover:bg-indigo-600 border border-gray-600 rounded text-white">d8</button>
+                <button onclick="quickRoll(10)" class="px-3 py-1 bg-slate-800 hover:bg-indigo-600 border border-gray-600 rounded text-white">d10</button>
+                <button onclick="quickRoll(12)" class="px-3 py-1 bg-slate-800 hover:bg-indigo-600 border border-gray-600 rounded text-white">d12</button>
+                <button onclick="quickRoll(20)" class="px-3 py-1 bg-dnd-red hover:bg-red-500 border border-red-700 rounded text-white font-bold">d20</button>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6" id="dm-party-container">
+                <!-- Party cards injected by JS -->
+            </div>
+        </div>
+
+    </main>
+
+    <!-- Character Info Modal (Player selection) -->
+    <div id="character-modal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center hidden opacity-0 transition-opacity duration-300">
+        <div class="bg-dnd-panel border-2 border-dnd-gold/50 rounded-xl max-w-md w-full mx-4 shadow-2xl overflow-hidden transform scale-95 transition-transform duration-300" id="modal-content-box">
+            <!-- Modal Content -->
+        </div>
+    </div>
+
+    <!-- Enhanced Dice Roller Overlay -->
+    <div id="dice-overlay" class="fixed bottom-0 left-0 w-full bg-dnd-panel border-t-2 border-dnd-red shadow-[0_-10px_40px_rgba(233,69,96,0.3)] p-4 hidden z-50">
+        <div class="container mx-auto max-w-3xl flex flex-col md:flex-row items-center justify-between relative">
+            <div class="flex items-center gap-4 mb-4 md:mb-0 w-full md:w-1/3">
+                <div class="relative w-12 h-12 flex items-center justify-center">
+                    <i id="dice-icon" class="fa-solid fa-dice-d20 text-5xl text-dnd-red absolute"></i>
+                </div>
+                <div>
+                    <h3 id="dice-title" class="font-title text-xl text-dnd-gold leading-none">Tirada</h3>
+                    <p id="dice-formula" class="text-sm text-gray-400 mt-1">1d20 + 0</p>
+                </div>
+            </div>
+            
+            <div class="flex flex-col items-center justify-center bg-dnd-dark px-8 py-3 rounded-lg border-2 border-dnd-gold/30 w-full md:w-1/3 shadow-inner">
+                <span class="text-xs text-gray-400 uppercase tracking-widest mb-1">Resultado</span>
+                <div class="flex items-end gap-3 h-10">
+                    <span id="dice-result-main" class="text-5xl font-bold font-title text-white leading-none">--</span>
+                    <span id="dice-result-sub" class="text-lg text-dnd-red mb-1 hidden font-bold"></span>
+                </div>
+            </div>
+
+            <div class="w-full md:w-1/3 flex justify-end mt-4 md:mt-0">
+                <button onclick="closeDiceTray()" class="bg-slate-800 hover:bg-slate-700 text-gray-400 hover:text-white rounded-full w-10 h-10 flex items-center justify-center transition-colors border border-gray-600">
+                    <i class="fa-solid fa-times"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- DATA WITH FUN DESCRIPTIONS ---
+        const baseCharacters = [
+            {
+                name: "Thaladín Buscaestrellas", race: "Mediano", class: "Mago", 
+                tagline: "Lee libros, lanza fuego.",
+                recommended: "Jugadores que aman tener un truco mágico para cada situación.",
+                icon: "fa-hat-wizard", color: "text-blue-400",
+                hpMax: 9, ac: 12, acDesc: "Sin armadura",
+                attacks: [
+                    { name: "Proyectil de Fuego", mod: 3, dmgDice: "1d10", dmgMod: 0, type: "Fuego" },
+                    { name: "Bastón Arcano", mod: 3, dmgDice: "1d6", dmgMod: 0, type: "Cont." }
+                ],
+                skills: [ { name: "Arcana", mod: 5 }, { name: "Historia", mod: 5 }, { name: "Naturaleza", mod: 5 } ],
+                equipment: ["Grimorio", "Pluma y Tinta", "Componentes Mágicos", "Raciones (1 día)"],
+                ability: { name: "Misil Mágico (2 usos/día)", desc: "Lanza 3 misiles infalibles. Cada misil inflige 1d4+1 de daño por fuerza." },
+                ability2: { name: "Escudo Mágico (1 vez/día)", desc: "Reacción: +5 CA temporalmente." }
+            },
+            {
+                name: "Milo Piesligeros", race: "Elfo", class: "Pícaro", 
+                tagline: "Lo tuyo es mío y lo mío es mío.",
+                recommended: "Jugadores escurridizos que prefieren atacar por la espalda y desactivar trampas.",
+                icon: "fa-mask", color: "text-emerald-500",
+                hpMax: 11, ac: 14, acDesc: "Armadura Cuero",
+                attacks: [
+                    { name: "Daga (x2)", mod: 5, dmgDice: "1d4", dmgMod: 3, type: "Perf." },
+                    { name: "Arco Corto", mod: 3, dmgDice: "1d6", dmgMod: 3, type: "Perf." }
+                ],
+                skills: [ { name: "Acrobacias", mod: 5 }, { name: "Investigación", mod: 3 }, { name: "Percepción", mod: 3 }, { name: "Sigilo", mod: 5 } ],
+                equipment: ["5 Flechas", "Kit de Escalada", "Htas. de Ladrón", "Capa oscura", "Raciones (1 día)"],
+                ability: { name: "Ataque Furtivo Ágil", desc: "Una vez por turno, infliges +1d6 de daño extra si atacas con ventaja o si un aliado está a 5 pies. Acción Adicional: Esconderte." }
+            },
+            {
+                name: "Bramm Escudodehierro", race: "Enano", class: "Guerrero", 
+                tagline: "Una pared de barba y acero.",
+                recommended: "Quienes disfrutan estar en la primera línea recibiendo y dando golpes durísimos.",
+                icon: "fa-shield-halved", color: "text-slate-400",
+                hpMax: 13, ac: 16, acDesc: "Malla y Escudo",
+                attacks: [
+                    { name: "Hacha de Batalla", mod: 3, dmgDice: "1d8", dmgMod: 4, type: "Cort." },
+                    { name: "Hacha de Mano", mod: 4, dmgDice: "1d6", dmgMod: 4, type: "Cort." }
+                ],
+                skills: [ { name: "Atletismo", mod: 6 }, { name: "Intimidación", mod: 3 }, { name: "Trato c/animales", mod: 5 }, { name: "Supervivencia", mod: 3 } ],
+                equipment: ["Palanca", "Raciones (1 día)", "Cuerda 50 pies", "Amuleto de Clan"],
+                ability: { name: "Nuevas Energías (1 uso/descanso)", desc: "Como acción adicional, te curas 1d10+2 PV." }
+            },
+            {
+                name: "Kaelen Portador de Alba", race: "Humano", class: "Clérigo", 
+                tagline: "El botiquín con patas (y maza).",
+                recommended: "Jugadores tácticos que mantienen a todos con vida y queman a los herejes.",
+                icon: "fa-book-bible", color: "text-yellow-200",
+                hpMax: 11, ac: 16, acDesc: "Escamas y Escudo",
+                attacks: [
+                    { name: "Maza Sagrada", mod: 5, dmgDice: "1d6", dmgMod: 3, type: "Cont." },
+                    { name: "Llama Divina", special: true, desc: "El objetivo hace Salvación de Destreza. Daño: 1d8 Radiante.", dmgDice: "1d8", dmgMod: 0, type: "Rad." }
+                ],
+                skills: [ { name: "Medicina", mod: 5 }, { name: "Perspicacia", mod: 5 }, { name: "Percepción", mod: 5 }, { name: "Religión", mod: 5 } ],
+                equipment: ["Símbolo Sagrado", "Agua Bendita", "Raciones", "Libro de Rezos"],
+                ability: { name: "Palabra Sanadora (2 usos/día)", desc: "Como acción adicional, cura 1d4+3 PV a un aliado a 60 pies." }
+            },
+            {
+                name: "Sombra Ágil", race: "Tabaxi", class: "Monje", 
+                tagline: "Velocidad felina y puños de furia.",
+                recommended: "Amantes de las artes marciales, golpear múltiples veces y correr por las paredes.",
+                icon: "fa-cat", color: "text-orange-400",
+                hpMax: 10, ac: 15, acDesc: "Sin Armadura",
+                attacks: [
+                    { name: "Golpe Desarmado", mod: 5, dmgDice: "1d4", dmgMod: 3, type: "Cont." },
+                    { name: "Dardos (10)", mod: 5, dmgDice: "1d4", dmgMod: 3, type: "Perf." }
+                ],
+                skills: [ { name: "Acrobacias", mod: 5 }, { name: "Sigilo", mod: 5 }, { name: "Percepción", mod: 4 } ],
+                equipment: ["Ropa de Viajero", "Flauta de Madera", "Cuerda 50 pies", "Raciones (1 día)"],
+                ability: { name: "Ráfaga de Golpes (1 uso/descanso)", desc: "Tras atacar en tu turno, da dos golpes desarmados extra como acción adicional." }
+            },
+            {
+                name: "Korinn Escamasdoradas", race: "Dracónido", class: "Paladín", 
+                tagline: "Justicia brillante con aliento letal.",
+                recommended: "Líderes carismáticos que buscan la gloria, proteger al débil y hacer daños masivos.",
+                icon: "fa-dragon", color: "text-yellow-500",
+                hpMax: 12, ac: 16, acDesc: "Cota de Malla",
+                attacks: [
+                    { name: "Espada Larga", mod: 4, dmgDice: "1d8", dmgMod: 3, type: "Cort." },
+                    { name: "Jabalina (5)", mod: 5, dmgDice: "1d6", dmgMod: 3, type: "Perf." }
+                ],
+                skills: [ { name: "Atletismo", mod: 5 }, { name: "Intimidación", mod: 3 }, { name: "Perspicacia", mod: 4 }, { name: "Religión", mod: 2 }, { name: "Persuasión", mod: 3 } ],
+                equipment: ["Símbolo Sagrado", "Raciones (1 día)", "Escudo", "Poción Curación"],
+                ability: { name: "Castigo Divino (1 uso/día)", desc: "Al impactar un ataque cuerpo a cuerpo, infliges +2d8 de daño radiante extra." }
+            },
+            {
+                name: "Lilith Tejeméntes", race: "Tiefling", class: "Bruja", 
+                tagline: "Hizo un trato dudoso por poderes geniales.",
+                recommended: "Jugadores persuasivos que disfrutan usar magia oscura y controlar mentes.",
+                icon: "fa-book-skull", color: "text-purple-500",
+                hpMax: 10, ac: 13, acDesc: "Armadura Cuero",
+                attacks: [
+                    { name: "Descarga Mística", mod: 5, dmgDice: "1d10", dmgMod: 0, type: "Fuerza" },
+                    { name: "Daga Ritual", mod: 4, dmgDice: "1d4", dmgMod: 2, type: "Perf." }
+                ],
+                skills: [ { name: "Engaño", mod: 5 }, { name: "Persuasión", mod: 5 }, { name: "Acrobacias", mod: 4 }, { name: "Perspicacia", mod: 4 } ],
+                equipment: ["Orbe Arcano Oscuro", "Libro Sellado", "Velas Negras", "Disfraz"],
+                ability: { name: "Orden Psíquica (2 usos/descanso)", desc: "Criatura a 30 pies hace salvación de Sabiduría (Dif. 13). Si falla, obedece una orden de 1 palabra." }
+            },
+            {
+                name: "Faelar Cuerdaveloz", race: "Semielfo", class: "Bardo", 
+                tagline: "Canta mal, pero hiere peor.",
+                recommended: "Quienes aman ser el centro de atención y apoyar al equipo con estilo.",
+                icon: "fa-guitar", color: "text-pink-400",
+                hpMax: 10, ac: 14, acDesc: "Armadura Cuero",
+                attacks: [
+                    { name: "Estoque", mod: 4, dmgDice: "1d8", dmgMod: 2, type: "Perf." },
+                    { name: "Burlas Crueles", special: true, desc: "Salvación Sabiduría. Daño: 1d4 Psíquico y desventaja.", dmgDice: "1d4", dmgMod: 0, type: "Psíq." }
+                ],
+                skills: [ { name: "Interpretación", mod: 5 }, { name: "Intimidación", mod: 5 }, { name: "Persuasión", mod: 5 }, { name: "Sigilo", mod: 4 } ],
+                equipment: ["Laúd Finamente", "Ropa Elegante", "Disfraz", "Cuerda 50 pies"],
+                ability: { name: "Inspiración Bárdica (2 usos/día)", desc: "Das un dado de aliento. Un aliado a 60 pies puede sumarlo a una tirada en los próximos 10 mins." }
+            },
+            {
+                name: "Gimble Tuercofino", race: "Gnomo", class: "Artífice", 
+                tagline: "¿Qué pasa si aprieto este botón?",
+                recommended: "Jugadores creativos que aman los artilugios y las explosiones.",
+                icon: "fa-cogs", color: "text-cyan-400",
+                hpMax: 11, ac: 15, acDesc: "Cuero Tachonado",
+                attacks: [
+                    { name: "Ballesta Infundida", mod: 5, dmgDice: "1d8", dmgMod: 3, type: "Perf." },
+                    { name: "Martillo Ligero", mod: 4, dmgDice: "1d4", dmgMod: 2, type: "Cont." }
+                ],
+                skills: [ { name: "Investigación", mod: 5 }, { name: "Arcana", mod: 5 }, { name: "Htas. Artesano", mod: 5 }, { name: "Percepción", mod: 3 } ],
+                equipment: ["Htas. de Herrero", "Tuercas y Engranajes", "Gafas", "Ballesta"],
+                ability: { name: "Elixir Experimental (1 uso/día)", desc: "Tira 1d4 para efecto aleatorio (Cura, Velocidad, CA, o Daño extra)." }
+            },
+            {
+                name: "Garrosh Rompecráneos", race: "Semiorco", class: "Bárbaro", 
+                tagline: "Pega primero, pregunta después.",
+                recommended: "Aquellos que solo quieren gritar, enfurecerse y lanzar muchos dados de daño.",
+                icon: "fa-gavel", color: "text-red-500",
+                hpMax: 15, ac: 14, acDesc: "Sin Armadura",
+                attacks: [
+                    { name: "Gran Hacha", mod: 6, dmgDice: "1d12", dmgMod: 4, type: "Cort." },
+                    { name: "Jabalina (4)", mod: 6, dmgDice: "1d6", dmgMod: 4, type: "Perf." }
+                ],
+                skills: [ { name: "Atletismo", mod: 6 }, { name: "Intimidación", mod: 4 }, { name: "Supervivencia", mod: 3 }, { name: "Naturaleza", mod: 3 } ],
+                equipment: ["Gran Hacha Astillada", "Talismán Hueso", "Raciones", "Pieles Gruesas"],
+                ability: { name: "Furia (2 usos/día)", desc: "Entras en frenesí por 1 min. Ventaja en Fuerza y recibes la mitad del daño físico." }
+            }
+        ];
+
+        // System State
+        let characters = JSON.parse(JSON.stringify(baseCharacters)); // Deep copy for player
+        characters.forEach(char => {
+            char.currentHp = char.hpMax;
+            char.equipState = new Array(char.equipment.length).fill(false);
+        });
+        
+        let activePlayerIndex = -1;
+        let dmParty = []; // Array of { baseCharIndex, hp, initiative, equipState }
+
+        // --- CORE NAVIGATION ---
+
+        function initApp() {
+            renderSelectionGrid();
+            renderDMSetup();
+        }
+
+        function showView(viewId) {
+            // Hide all views
+            document.querySelectorAll('.view-section').forEach(el => el.classList.add('hidden'));
+            document.getElementById(viewId).classList.remove('hidden');
+
+            // Header adjustments
+            const btnBack = document.getElementById('btn-back-selection');
+            const btnDm = document.getElementById('btn-dm-mode');
+            
+            if (viewId === 'selection-view') {
+                btnBack.classList.add('hidden');
+                btnDm.classList.remove('hidden');
+                closeDiceTray();
+            } else if (viewId === 'sheet-view' || viewId === 'dm-dashboard-view' || viewId === 'dm-setup-view') {
+                btnBack.classList.remove('hidden');
+                btnDm.classList.add('hidden');
+            }
+
+            if(viewId === 'dm-dashboard-view') {
+                renderDmDashboard();
+            }
+        }
+
+        // --- PLAYER MODE LOGIC ---
+
+        function renderSelectionGrid() {
+            const grid = document.getElementById('character-grid');
+            grid.innerHTML = characters.map((char, index) => `
+                <div onclick="openModal(${index})" class="bg-dnd-panel border border-gray-700 hover:border-dnd-gold rounded-xl p-6 cursor-pointer transform hover:-translate-y-1 transition-all duration-200 group text-center shadow-lg relative overflow-hidden">
+                    <div class="absolute -right-4 -top-4 opacity-5 text-8xl pointer-events-none ${char.color}">
+                        <i class="fa-solid ${char.icon}"></i>
+                    </div>
+                    <div class="w-20 h-20 mx-auto bg-slate-800 rounded-full flex items-center justify-center mb-4 group-hover:scale-110 transition-transform shadow-inner border border-gray-600">
+                        <i class="fa-solid ${char.icon} text-3xl ${char.color}"></i>
+                    </div>
+                    <h3 class="font-title text-xl text-white mb-1">${char.name.split(' ')[0]}</h3>
+                    <p class="text-xs text-dnd-gold uppercase tracking-wider mb-3">${char.race} • ${char.class}</p>
+                    <p class="text-sm text-gray-400 italic">"${char.tagline}"</p>
+                </div>
+            `).join('');
+        }
+
+        function openModal(index) {
+            const char = characters[index];
+            const modal = document.getElementById('character-modal');
+            const contentBox = document.getElementById('modal-content-box');
+            
+            contentBox.innerHTML = `
+                <div class="relative bg-dnd-dark p-6 text-center border-b border-gray-700 overflow-hidden">
+                    <button onclick="closeModal()" class="absolute top-4 right-4 text-gray-400 hover:text-white transition-colors z-10">
+                        <i class="fa-solid fa-times text-xl"></i>
+                    </button>
+                    <div class="absolute inset-0 opacity-10 flex items-center justify-center">
+                         <i class="fa-solid ${char.icon} text-[150px] ${char.color}"></i>
+                    </div>
+                    <div class="relative z-10">
+                        <div class="w-24 h-24 mx-auto bg-slate-800 rounded-full flex items-center justify-center mb-4 border-2 border-gray-600 shadow-xl">
+                            <i class="fa-solid ${char.icon} text-4xl ${char.color}"></i>
+                        </div>
+                        <h2 class="text-3xl text-dnd-gold font-title mb-1">${char.name}</h2>
+                        <p class="text-gray-300 uppercase tracking-widest text-sm">${char.race} | ${char.class}</p>
+                    </div>
+                </div>
+                <div class="p-6 bg-dnd-panel">
+                    <div class="mb-6">
+                        <h4 class="text-sm text-gray-400 uppercase mb-2 flex items-center gap-2">
+                            <i class="fa-solid fa-bullseye text-dnd-red"></i> Recomendado para:
+                        </h4>
+                        <p class="text-white text-sm leading-relaxed">${char.recommended}</p>
+                    </div>
+                    
+                    <div class="flex gap-3">
+                        <button onclick="closeModal()" class="flex-1 px-4 py-3 rounded-lg border border-gray-600 text-gray-300 hover:bg-slate-700 transition-colors">
+                            Cancelar
+                        </button>
+                        <button onclick="lockCharacter(${index})" class="flex-1 px-4 py-3 rounded-lg bg-dnd-red hover:bg-red-600 text-white font-bold transition-colors shadow-lg shadow-red-900/50 flex items-center justify-center gap-2">
+                            <i class="fa-solid fa-user-check"></i> Jugar
+                        </button>
+                    </div>
+                </div>
+            `;
+            modal.classList.remove('hidden');
+            void modal.offsetWidth; 
+            modal.classList.remove('opacity-0');
+            contentBox.classList.remove('scale-95');
+            contentBox.classList.add('scale-100');
+        }
+
+        function closeModal() {
+            const modal = document.getElementById('character-modal');
+            const contentBox = document.getElementById('modal-content-box');
+            modal.classList.add('opacity-0');
+            contentBox.classList.remove('scale-100');
+            contentBox.classList.add('scale-95');
+            setTimeout(() => { modal.classList.add('hidden'); }, 300);
+        }
+
+        function lockCharacter(index) {
+            closeModal();
+            activePlayerIndex = index;
+            renderPlayerSheet();
+            showView('sheet-view');
+        }
+
+        function renderPlayerSheet() {
+            const char = characters[activePlayerIndex];
+            const content = document.getElementById('sheet-view');
+            
+            content.innerHTML = `
+                <!-- Player Header -->
+                <div class="bg-dnd-panel rounded-xl shadow-lg p-6 border border-gray-700 mb-6 flex flex-col md:flex-row items-center justify-between gap-6 relative overflow-hidden">
+                    <div class="absolute -right-4 -top-4 opacity-5 text-9xl pointer-events-none ${char.color}">
+                        <i class="fa-solid ${char.icon}"></i>
+                    </div>
+                    
+                    <div class="flex items-center gap-6 z-10">
+                        <div class="w-16 h-16 bg-slate-800 rounded-full flex items-center justify-center border border-gray-600 hidden sm:flex shadow-inner">
+                            <i class="fa-solid ${char.icon} text-2xl ${char.color}"></i>
+                        </div>
+                        <div>
+                            <h2 class="text-3xl md:text-4xl text-dnd-gold mb-1">${char.name}</h2>
+                            <p class="text-gray-400 text-lg uppercase tracking-widest">${char.race} • ${char.class}</p>
+                        </div>
+                    </div>
+
+                    <div class="flex gap-6 z-10">
+                        <div class="flex flex-col items-center justify-center relative">
+                            <i class="fa-solid fa-shield text-5xl text-slate-700"></i>
+                            <span class="absolute text-2xl font-bold font-title text-white mt-1">${char.ac}</span>
+                            <span class="text-xs text-gray-400 mt-2 text-center w-20 leading-tight">${char.acDesc}</span>
+                        </div>
+
+                        <div class="bg-slate-800 border border-slate-600 rounded-lg p-3 flex flex-col items-center min-w-[120px]">
+                            <span class="text-xs text-dnd-red uppercase font-bold mb-1">Puntos de Golpe</span>
+                            <div class="flex items-center gap-3">
+                                <button onclick="changePlayerHp(-1)" class="w-8 h-8 rounded-full bg-slate-700 hover:bg-dnd-red flex items-center justify-center transition-colors"><i class="fa-solid fa-minus"></i></button>
+                                <span class="text-2xl font-bold font-title w-10 text-center" id="player-hp-display">${char.currentHp}</span>
+                                <button onclick="changePlayerHp(1)" class="w-8 h-8 rounded-full bg-slate-700 hover:bg-emerald-500 flex items-center justify-center transition-colors"><i class="fa-solid fa-plus"></i></button>
+                            </div>
+                            <span class="text-xs text-gray-500 mt-1">Máx: ${char.hpMax}</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Custom Dice Bar -->
+                <div class="bg-slate-800 rounded-xl p-3 border border-gray-700 mb-6 flex overflow-x-auto gap-2 items-center hide-scrollbar shadow-inner">
+                    <span class="text-dnd-gold text-sm whitespace-nowrap pl-2 pr-4 font-bold border-r border-gray-600 mr-2"><i class="fa-solid fa-dice"></i> Dados Libres</span>
+                    <button onclick="quickRoll(4)" class="px-4 py-2 bg-slate-700 hover:bg-dnd-red rounded border border-gray-600 hover:border-red-400 transition-colors">d4</button>
+                    <button onclick="quickRoll(6)" class="px-4 py-2 bg-slate-700 hover:bg-dnd-red rounded border border-gray-600 hover:border-red-400 transition-colors">d6</button>
+                    <button onclick="quickRoll(8)" class="px-4 py-2 bg-slate-700 hover:bg-dnd-red rounded border border-gray-600 hover:border-red-400 transition-colors">d8</button>
+                    <button onclick="quickRoll(10)" class="px-4 py-2 bg-slate-700 hover:bg-dnd-red rounded border border-gray-600 hover:border-red-400 transition-colors">d10</button>
+                    <button onclick="quickRoll(12)" class="px-4 py-2 bg-slate-700 hover:bg-dnd-red rounded border border-gray-600 hover:border-red-400 transition-colors">d12</button>
+                    <button onclick="quickRoll(20)" class="px-4 py-2 bg-dnd-red hover:bg-red-500 rounded border border-red-400 transition-colors font-bold">d20</button>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+                    <!-- Attacks -->
+                    <div class="bg-dnd-panel rounded-xl p-5 border border-gray-700">
+                        <h3 class="text-xl text-dnd-red border-b border-gray-700 pb-2 mb-4 flex items-center gap-2"><i class="fa-solid fa-gavel"></i> Ataques</h3>
+                        <div class="space-y-3">
+                            ${char.attacks.map((atk) => `
+                                <div onclick="${atk.special ? `rollDamage('${atk.name}', '${atk.dmgDice}', ${atk.dmgMod}, '${atk.type}', '${atk.desc}')` : `rollAttack('${atk.name}', ${atk.mod}, '${atk.dmgDice}', ${atk.dmgMod}, '${atk.type}')`}" 
+                                     class="bg-slate-800 p-3 rounded cursor-pointer hover:bg-slate-700 border border-transparent hover:border-dnd-gold/50 transition-all group">
+                                    <div class="flex justify-between items-center mb-1">
+                                        <span class="font-bold text-lg group-hover:text-dnd-gold">${atk.name}</span>
+                                        ${!atk.special ? `<span class="bg-slate-900 px-2 py-1 rounded text-sm text-emerald-400 font-mono">+${atk.mod}</span>` : `<span class="text-xs text-dnd-gold"><i class="fa-solid fa-star"></i> Especial</span>`}
+                                    </div>
+                                    <div class="text-sm text-gray-400"><i class="fa-solid fa-dice-d20 mr-1"></i> ${atk.dmgDice}${atk.dmgMod > 0 ? '+'+atk.dmgMod : ''} ${atk.type}</div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+
+                    <!-- Skills -->
+                    <div class="bg-dnd-panel rounded-xl p-5 border border-gray-700">
+                        <h3 class="text-xl text-dnd-red border-b border-gray-700 pb-2 mb-4 flex items-center gap-2"><i class="fa-solid fa-star"></i> Habilidades</h3>
+                        <div class="grid grid-cols-2 gap-3">
+                            ${char.skills.map(skill => `
+                                <div onclick="rollSkill('${skill.name}', ${skill.mod})" class="flex justify-between items-center bg-slate-800 p-3 rounded cursor-pointer hover:bg-slate-700 border border-transparent hover:border-emerald-500/50 transition-all group">
+                                    <span class="group-hover:text-white">${skill.name}</span>
+                                    <span class="font-mono text-emerald-400 bg-slate-900 px-2 py-1 rounded shadow-inner">+${skill.mod}</span>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+
+                    <!-- Abilities & Equipment -->
+                    <div class="flex flex-col gap-6">
+                        <div class="bg-dnd-panel rounded-xl p-5 border border-gray-700">
+                            <h3 class="text-xl text-dnd-red border-b border-gray-700 pb-2 mb-4 flex items-center gap-2"><i class="fa-solid fa-bolt"></i> Rasgos</h3>
+                            <div class="mb-3"><strong class="text-dnd-gold block mb-1">${char.ability.name}</strong><p class="text-sm text-gray-300 leading-relaxed">${char.ability.desc}</p></div>
+                            ${char.ability2 ? `<div><strong class="text-dnd-gold block mb-1">${char.ability2.name}</strong><p class="text-sm text-gray-300 leading-relaxed">${char.ability2.desc}</p></div>` : ''}
+                        </div>
+
+                        <div class="bg-dnd-panel rounded-xl p-5 border border-gray-700 flex-grow">
+                            <h3 class="text-xl text-dnd-red border-b border-gray-700 pb-2 mb-4 flex items-center gap-2"><i class="fa-solid fa-backpack"></i> Equipamiento</h3>
+                            <ul class="space-y-2">
+                                ${char.equipment.map((item, i) => `
+                                    <li class="flex items-center gap-3 equipment-item ${char.equipState[i] ? 'strike-through' : ''}" onclick="togglePlayerEquip(${i}, this)">
+                                        <div class="w-5 h-5 rounded border ${char.equipState[i] ? 'bg-dnd-red border-dnd-red' : 'border-gray-500'} flex items-center justify-center transition-colors">
+                                            ${char.equipState[i] ? '<i class="fa-solid fa-check text-white text-xs"></i>' : ''}
+                                        </div>
+                                        <span>${item}</span>
+                                    </li>
+                                `).join('')}
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function changePlayerHp(amount) {
+            const char = characters[activePlayerIndex];
+            char.currentHp = Math.max(0, Math.min(char.hpMax, char.currentHp + amount));
+            document.getElementById('player-hp-display').innerText = char.currentHp;
+        }
+
+        function togglePlayerEquip(index, el) {
+            const char = characters[activePlayerIndex];
+            char.equipState[index] = !char.equipState[index];
+            const cb = el.querySelector('div');
+            if (char.equipState[index]) {
+                el.classList.add('strike-through');
+                cb.classList.add('bg-dnd-red', 'border-dnd-red'); cb.classList.remove('border-gray-500');
+                cb.innerHTML = '<i class="fa-solid fa-check text-white text-xs"></i>';
+            } else {
+                el.classList.remove('strike-through');
+                cb.classList.remove('bg-dnd-red', 'border-dnd-red'); cb.classList.add('border-gray-500');
+                cb.innerHTML = '';
+            }
+        }
+
+        // --- DM MODE LOGIC ---
+
+        function renderDMSetup() {
+            const grid = document.getElementById('dm-roster-grid');
+            grid.innerHTML = baseCharacters.map((char, index) => {
+                // Count how many of this char are in party
+                const count = dmParty.filter(p => p.baseIndex === index).length;
+                return `
+                <div class="flex items-center justify-between bg-slate-800 p-3 rounded-lg border border-gray-600">
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 rounded-full bg-slate-900 flex items-center justify-center border border-gray-700">
+                            <i class="fa-solid ${char.icon} ${char.color}"></i>
+                        </div>
+                        <div>
+                            <p class="font-bold text-sm text-white leading-tight">${char.name.split(' ')[0]}</p>
+                            <p class="text-xs text-gray-400">${char.class}</p>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-2 bg-slate-900 rounded-full p-1 border border-gray-700">
+                        <button onclick="updatePartyCount(${index}, -1)" class="w-6 h-6 rounded-full bg-slate-700 hover:bg-red-500 text-white flex items-center justify-center text-xs transition-colors"><i class="fa-solid fa-minus"></i></button>
+                        <span class="w-4 text-center text-sm font-bold">${count}</span>
+                        <button onclick="updatePartyCount(${index}, 1)" class="w-6 h-6 rounded-full bg-slate-700 hover:bg-emerald-500 text-white flex items-center justify-center text-xs transition-colors"><i class="fa-solid fa-plus"></i></button>
+                    </div>
+                </div>
+            `}).join('');
+            document.getElementById('dm-party-count').innerText = dmParty.length;
+        }
+
+        function updatePartyCount(baseIndex, change) {
+            if (change > 0) {
+                // Add to party
+                const charData = baseCharacters[baseIndex];
+                dmParty.push({
+                    baseIndex: baseIndex,
+                    id: Date.now() + Math.random(), // unique ID
+                    name: charData.name.split(' ')[0],
+                    icon: charData.icon, color: charData.color,
+                    hpMax: charData.hpMax,
+                    currentHp: charData.hpMax,
+                    ac: charData.ac,
+                    initiative: 0,
+                    equipment: [...charData.equipment],
+                    equipState: new Array(charData.equipment.length).fill(false)
+                });
+            } else if (change < 0) {
+                // Remove last instance of this char
+                for (let i = dmParty.length - 1; i >= 0; i--) {
+                    if (dmParty[i].baseIndex === baseIndex) {
+                        dmParty.splice(i, 1);
+                        break;
+                    }
+                }
+            }
+            renderDMSetup();
+        }
+
+        function startDMSession() {
+            if(dmParty.length === 0) { alert("¡Añade al menos un jugador al grupo!"); return; }
+            showView('dm-dashboard-view');
+        }
+
+        function renderDmDashboard() {
+            const container = document.getElementById('dm-party-container');
+            if(dmParty.length === 0) { container.innerHTML = '<p class="text-gray-400 italic">No hay jugadores en el grupo.</p>'; return; }
+
+            container.innerHTML = dmParty.map((p, i) => `
+                <div class="bg-dnd-panel rounded-xl p-5 border border-indigo-500/30 shadow-lg relative">
+                    <div class="flex justify-between items-start mb-4 border-b border-gray-700 pb-3">
+                        <div class="flex items-center gap-3">
+                            <div class="w-12 h-12 rounded-full bg-slate-800 flex items-center justify-center border border-gray-600">
+                                <i class="fa-solid ${p.icon} text-xl ${p.color}"></i>
+                            </div>
+                            <div>
+                                <h3 class="font-title text-xl text-white leading-tight">${p.name}</h3>
+                                <p class="text-xs text-gray-400">CA: <span class="text-white font-bold">${p.ac}</span></p>
+                            </div>
+                        </div>
+                        <div class="flex flex-col items-end">
+                            <label class="text-xs text-gray-400 uppercase mb-1">Iniciativa</label>
+                            <input type="number" value="${p.initiative}" onchange="updateInitiative(${i}, this.value)" class="w-16 bg-slate-900 border border-indigo-500/50 rounded p-1 text-center text-dnd-gold font-bold font-title">
+                        </div>
+                    </div>
+
+                    <div class="flex justify-between items-center mb-4">
+                        <span class="text-sm text-gray-400 font-bold">PUNTOS DE GOLPE</span>
+                        <div class="flex items-center gap-3 bg-slate-900 p-1 rounded-lg border border-gray-700">
+                            <button onclick="updateDmHp(${i}, -1)" class="w-8 h-8 rounded bg-slate-800 hover:bg-dnd-red transition-colors"><i class="fa-solid fa-minus"></i></button>
+                            <span class="text-2xl font-title w-10 text-center ${p.currentHp <= p.hpMax/3 ? 'text-dnd-red' : 'text-white'}">${p.currentHp}</span>
+                            <button onclick="updateDmHp(${i}, 1)" class="w-8 h-8 rounded bg-slate-800 hover:bg-emerald-500 transition-colors"><i class="fa-solid fa-plus"></i></button>
+                        </div>
+                    </div>
+
+                    <details class="group">
+                        <summary class="text-xs text-gray-400 cursor-pointer hover:text-white uppercase font-bold outline-none flex justify-between items-center bg-slate-800 p-2 rounded">
+                            <span><i class="fa-solid fa-backpack mr-2"></i> Equipamiento</span>
+                            <i class="fa-solid fa-chevron-down group-open:rotate-180 transition-transform"></i>
+                        </summary>
+                        <ul class="mt-2 space-y-1 bg-slate-900 p-2 rounded border border-gray-700 max-h-32 overflow-y-auto hide-scrollbar">
+                            ${p.equipment.map((item, eqIdx) => `
+                                <li class="flex items-center gap-2 text-sm equipment-item ${p.equipState[eqIdx] ? 'strike-through' : ''}" onclick="toggleDmEquip(${i}, ${eqIdx})">
+                                    <i class="fa-solid ${p.equipState[eqIdx] ? 'fa-check-square text-dnd-red' : 'fa-square text-gray-500'}"></i> ${item}
+                                </li>
+                            `).join('')}
+                        </ul>
+                    </details>
+                </div>
+            `).join('');
+        }
+
+        function updateDmHp(partyIndex, change) {
+            let p = dmParty[partyIndex];
+            p.currentHp = Math.max(0, Math.min(p.hpMax, p.currentHp + change));
+            renderDmDashboard();
+        }
+
+        function updateInitiative(partyIndex, val) {
+            dmParty[partyIndex].initiative = parseInt(val) || 0;
+        }
+
+        function sortInitiative() {
+            dmParty.sort((a, b) => b.initiative - a.initiative);
+            renderDmDashboard();
+        }
+
+        function toggleDmEquip(partyIdx, eqIdx) {
+            dmParty[partyIdx].equipState[eqIdx] = !dmParty[partyIdx].equipState[eqIdx];
+            renderDmDashboard();
+        }
+
+        // --- ENHANCED DICE LOGIC (Slot Machine Effect) ---
+
+        function getRand(sides) { return Math.floor(Math.random() * sides) + 1; }
+
+        function triggerDiceAnimation(title, formula, finalMainResult, subResultText = "") {
+            const tray = document.getElementById('dice-overlay');
+            const icon = document.getElementById('dice-icon');
+            const mainResultEl = document.getElementById('dice-result-main');
+            const subResultEl = document.getElementById('dice-result-sub');
+
+            // Set texts
+            document.getElementById('dice-title').innerText = title;
+            document.getElementById('dice-formula').innerText = formula;
+            subResultEl.classList.add('hidden');
+            
+            // Show Tray
+            tray.classList.remove('hidden', 'slide-up');
+            void tray.offsetWidth; 
+            tray.classList.add('slide-up');
+
+            // Icon Animation
+            icon.classList.remove('rolling');
+            void icon.offsetWidth;
+            icon.classList.add('rolling');
+
+            // Slot Machine Text Effect
+            const duration = 600; // ms
+            const intervalTime = 40; 
+            const startTime = Date.now();
+            
+            mainResultEl.classList.add('text-dnd-gold', 'number-blur');
+            mainResultEl.classList.remove('text-white');
+
+            const slotInterval = setInterval(() => {
+                const now = Date.now();
+                if (now - startTime >= duration) {
+                    clearInterval(slotInterval);
+                    // Final state
+                    mainResultEl.innerText = finalMainResult;
+                    mainResultEl.classList.remove('text-dnd-gold', 'number-blur');
+                    mainResultEl.classList.add('text-white');
+                    
+                    if(subResultText) {
+                        subResultEl.innerText = subResultText;
+                        subResultEl.classList.remove('hidden');
+                        subResultEl.classList.add('fade-in');
+                    }
+                } else {
+                    // Random scrolling number (1-20 visual only)
+                    mainResultEl.innerText = getRand(20);
+                }
+            }, intervalTime);
+        }
+
+        function closeDiceTray() {
+            document.getElementById('dice-overlay').classList.add('hidden');
+        }
+
+        // Specific Rolls
+        function rollAttack(name, hitMod, dmgDiceStr, dmgMod, type) {
+            const d20 = getRand(20);
+            const totalHit = d20 + hitMod;
+            
+            const [count, sides] = dmgDiceStr.split('d').map(Number);
+            let dmgTotal = 0;
+            for(let i=0; i<count; i++) dmgTotal += getRand(sides);
+            dmgTotal += dmgMod;
+
+            let hitText = `${totalHit}`;
+            if (d20 === 20) hitText = "¡CRÍTICO!";
+            if (d20 === 1) hitText = "Pifia...";
+
+            triggerDiceAnimation(`Ataque: ${name}`, `ATQ: 1d20+${hitMod} | DAÑO: ${dmgDiceStr}${dmgMod>0 ? '+'+dmgMod : ''}`, hitText, `(${dmgTotal} de daño ${type})`);
+        }
+
+        function rollDamage(name, dmgDiceStr, dmgMod, type, desc) {
+            const [count, sides] = dmgDiceStr.split('d').map(Number);
+            let dmgTotal = 0;
+            for(let i=0; i<count; i++) dmgTotal += getRand(sides);
+            dmgTotal += dmgMod;
+
+            triggerDiceAnimation(`Especial: ${name}`, `DAÑO: ${dmgDiceStr}${dmgMod>0 ? '+'+dmgMod : ''}`, `${dmgTotal}`, `daño ${type}`);
+        }
+
+        function rollSkill(name, mod) {
+            const d20 = getRand(20);
+            const total = d20 + mod;
+            triggerDiceAnimation(`Chequeo: ${name}`, `1d20 ${mod >= 0 ? '+' : ''}${mod} (Dado sacó ${d20})`, total, "");
+        }
+
+        function quickRoll(sides) {
+            const result = getRand(sides);
+            triggerDiceAnimation(`Tirada Libre (d${sides})`, `Rolando 1d${sides}...`, result, "");
+        }
+
+        // Start
+        window.onload = initApp;
+
+    </script>
+</body>
+</html>
