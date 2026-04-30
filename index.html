@@ -723,7 +723,12 @@
 
         // --- ENHANCED DICE LOGIC (Slot Machine Effect) ---
 
-        function getRand(sides) { return Math.floor(Math.random() * sides) + 1; }
+        function getRand(sides) { 
+            // Utilizamos la API de Criptografía Web para obtener una aleatoriedad segura y pura
+            const array = new Uint32Array(1);
+            window.crypto.getRandomValues(array);
+            return (array[0] % sides) + 1;
+        }
 
         function triggerDiceAnimation(title, formula, finalMainResult, subResultText = "") {
             const tray = document.getElementById('dice-overlay');
